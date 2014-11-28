@@ -4,47 +4,70 @@ import java.io.*;
 import java.net.*;
 
 class Network {
-
+    
+    private static DatagramPacket ReturnPacket;
+    private static DatagramPacket ReceivePacket;
+    private static DatagramSocket networkReceiveSocket;
+    private static DatagramSocket networkSendSocket;
+    private static InetAddress NetworkIPAddress;
+    private static InetAddress IPAddress;
+    private static byte[] receiveData = new byte[1024];
+    private static byte[] sendData = new byte[1024];
+        
+    
     
     public static void main(String args[]) throws Exception {
-        DatagramSocket networkSendSocket = new DatagramSocket(7006);
-        DatagramSocket networkReceiveSocket = new DatagramSocket(7007);
+        networkSendSocket = new DatagramSocket(7006);
+        networkReceiveSocket = new DatagramSocket(7007);
+        NetworkIPAddress = InetAddress.getByName("localhost");
         
-        InetAddress NetworkIPAddress = InetAddress.getByName("localhost");
         
-        byte[] receiveData = new byte[1024];
-        byte[] sendData = new byte[1024];
         
-        while (true) {
-            DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
-            networkSendSocket.receive(receivePacket);
+            while (true) {
+            ReceivePacket = new DatagramPacket(receiveData, receiveData.length);
+            forward(ReceivePacket);
             
             
-            String sentence = new String(receivePacket.getData());
+            
+            
+            
+            
+            ReturnPacket = new DatagramPacket(receiveData, receiveData.length);
+            acknowledge(ReturnPacket);
+            
+            
+            
+            
+        }
+    }
+    
+    
+    
+    
+    
+        public static void forward (DatagramPacket sendPacket) throws IOException{
+            networkSendSocket.receive(ReceivePacket);
+            String sentence = new String(ReceivePacket.getData());
             System.out.println("RECEIVED: " + sentence);
-            
-            InetAddress IPAddress = receivePacket.getAddress();
-            
+            IPAddress = ReceivePacket.getAddress();
             sendData = sentence.getBytes();
-            
-            
-            DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, IPAddress, 7008);
+            sendPacket = new DatagramPacket(sendData, sendData.length, IPAddress, 7008);
             networkSendSocket.send(sendPacket);
             
-            
-            
-            
-            
-            DatagramPacket ReturnPacket = new DatagramPacket(receiveData, receiveData.length);
+        }
+        
+        
+        
+        
+        public static void acknowledge (DatagramPacket ReturnPacket) throws IOException{
             networkReceiveSocket.receive(ReturnPacket);
-            String sentence2 = new String(receivePacket.getData());
+            String sentence2 = new String(ReceivePacket.getData());
             System.out.println("RETURNED: " + sentence2 );
-            
             DatagramPacket FinalPacket = new DatagramPacket(sendData, sendData.length, IPAddress, 7005);
             networkReceiveSocket.send(FinalPacket);
             
         }
     }
-}
+
 
 
