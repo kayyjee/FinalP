@@ -6,7 +6,7 @@ import java.net.*;
 
 class Network {
     
-    private static int bitLoss = 5; // ~5% of packets will be dropped.
+    private static int bitLoss = 2; // ~5% of packets will be dropped.
     private static DatagramPacket ReturnPacket;
     private static DatagramPacket ReceivePacket;
     private static DatagramSocket networkReceiveSocket;
@@ -67,9 +67,13 @@ class Network {
         public static void acknowledge (DatagramPacket ReturnPacket) throws IOException{
             networkReceiveSocket.receive(ReturnPacket);
             String sentence2 = new String(ReceivePacket.getData());
-            System.out.println("RETURNED: " + sentence2 );
+            
             DatagramPacket FinalPacket = new DatagramPacket(sendData, sendData.length, IPAddress, 7005);
+            
+            if (!drop()){
             networkReceiveSocket.send(FinalPacket);
+            System.out.println("RETURNED: " + sentence2 );
+            }
             
         }
         
