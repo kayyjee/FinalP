@@ -1,10 +1,12 @@
 package finaljk;
 
+import java.lang.Math;
 import java.io.*;
 import java.net.*;
 
 class Network {
     
+    private static int bitLoss = 5; // ~5% of packets will be dropped.
     private static DatagramPacket ReturnPacket;
     private static DatagramPacket ReceivePacket;
     private static DatagramSocket networkReceiveSocket;
@@ -46,14 +48,17 @@ class Network {
     
     
         public static void forward (DatagramPacket sendPacket) throws IOException{
+            
             networkSendSocket.receive(ReceivePacket);
             String sentence = new String(ReceivePacket.getData());
             System.out.println("RECEIVED: " + sentence);
             IPAddress = ReceivePacket.getAddress();
             sendData = sentence.getBytes();
             sendPacket = new DatagramPacket(sendData, sendData.length, IPAddress, 7008);
-            networkSendSocket.send(sendPacket);
             
+            if(!drop()){
+            networkSendSocket.send(sendPacket);
+            }
         }
         
         
@@ -65,6 +70,19 @@ class Network {
             System.out.println("RETURNED: " + sentence2 );
             DatagramPacket FinalPacket = new DatagramPacket(sendData, sendData.length, IPAddress, 7005);
             networkReceiveSocket.send(FinalPacket);
+            
+        }
+        
+        public static boolean drop () throws IOException{
+            int minimum = 0;
+            int maximum = 99;
+             
+            int randomNum = minimum + (int)(Math.random() * maximum);
+            if (randomNum > bitLoss){
+                return false;
+                
+            }
+            else return true;
             
         }
     }
