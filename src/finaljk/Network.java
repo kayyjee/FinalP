@@ -33,7 +33,7 @@ class Network {
             
             
             ReturnPacket = new DatagramPacket(receiveData, receiveData.length);
-            //acknowledge(ReturnPacket);
+            acknowledge(ReturnPacket);
             
             
             

@@ -4,20 +4,27 @@ import java.io.*;
 import java.net.*;
 
 class Server {
-
+    private static DatagramPacket ReturnPacket;
+    private static DatagramPacket ReceivePacket;
+    private static DatagramSocket serverSocket;
+    private static DatagramSocket networkSendSocket;
+    private static InetAddress ServerIPAddress;
+    private static InetAddress IPAddress;
+    private static byte[] receiveData = new byte[1024];
+    private static byte[] sendData = new byte[1024];
     public static void main(String args[]) throws Exception {
-        DatagramSocket serverSocket = new DatagramSocket(7008);
-        InetAddress ServerIPAddress = InetAddress.getByName("localhost");
         
-        byte[] receiveData = new byte[1024];
-        byte[] sendData = new byte[1024];
+        serverSocket = new DatagramSocket(7008);
+        ServerIPAddress = InetAddress.getByName("localhost");
+        
+       
         
         while (true) {
-            DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length );
-            serverSocket.receive(receivePacket);
-            String sentence = new String(receivePacket.getData());
-            System.out.println("RECEIVED: " + sentence);
-            InetAddress IPAddress = receivePacket.getAddress();
+            ReceivePacket = new DatagramPacket(receiveData, receiveData.length );
+            serverSocket.receive(ReceivePacket);
+            String sentence = new String(ReceivePacket.getData());
+            System.out.println("Server Has Received: " + sentence);
+            IPAddress = ReceivePacket.getAddress();
             
             
             String capitalizedSentence = sentence.toUpperCase();
