@@ -11,9 +11,10 @@ import java.io.Serializable;
  * @author JT
  */
 public class Packet implements Serializable {
-    //1=ACK
-    //2=Data
+    //1=Data
+    //2=ACK
     //3=EOT
+    //4=EOTACK
     private int packetType;	
     private int seqNum;
     private int windowSize;
@@ -58,9 +59,9 @@ public class Packet implements Serializable {
      
     @Override
     public String toString() {
-        return "Packet Type = " + getPacketType() + 
-                " Sequence Number = " + getSeqNum() + 
-                " Window Size = " + getWindowSize() + 
-                " Acknowledge Number = " + getAckNum();
+        return "Packet Type=" + getPacketType() + 
+                " Seq Num=" + getSeqNum() +
+                " Ack Num=" + getAckNum() + 
+                " Window Size=" + getWindowSize();
      }
 }
