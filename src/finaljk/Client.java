@@ -74,7 +74,7 @@ class Client {
 
         while (!PacketArray.isEmpty()) {
 
-            PrepareWindow();
+            PrepareWindow();//Fills up Window<> with window amount of packets. If there is not that many than 
 
             for (int c = 0; c < Window.size(); c++) {
                 int m = PacketArray.get(c).getPacketType();
