@@ -12,22 +12,25 @@ import java.util.logging.Logger;
 class Server {
 
     private static ArrayList<Packet> Window;//ArrayList that holds Packets for each Send of a WindowSize
+    public static ArrayList<Packet> PacketArray;//ArrayList that holds all Data Packets to be Sent.
     private static DatagramPacket sendPacket;//Data Packet sent to Network Emulator
     private static DatagramSocket clientSocket;//Socket to send to Network Emulator
+    private static DatagramPacket ReceivePacket;//Data Packet received from Emulator
+    private static DatagramSocket serverSocket;//Socket to receive from Network Emulator
     private static InetAddress NetEmuIPAddress;//IP Of Network Emulator
-    public static ArrayList<Packet> PacketArray;//ArrayList that holds all Data Packets to be Sent.
+    private static InetAddress IPAddress;//IP Address of Client Machine
+    private static int timeOut;//Amount of time before timeout throws exception
     private static int[] checkedPackets;//Array to hold Packets Received
     private static final int WindowSize = 10;//Size of Window 
     private static final int totalPackets = 50;//Amount of Packets to send
     private static final byte[] receiveData = new byte[1024];//Byte Array of Packets Received
     private static byte[] sendData = new byte[1024];//Byte Array of Packets Sent
-    static PrintWriter writer;//Write to log Files
-    private static DatagramPacket ReceivePacket;//Data Packet received from Emulator
-    private static DatagramSocket serverSocket;//Socket to receive from Network Emulator
-    private static InetAddress IPAddress;//IP Address of Client Machine
     private static long delay = 666;//Delay before sending each Packet
     private static boolean EOTSent = false;//Boolean turns true only when EOT sent
-    private static int timeOut;//Amount of time before timeout throws exception
+    static PrintWriter writer;//Write to log Files
+
+    
+    
 
     public static void main(String args[]) throws Exception {
         //Obtaining and formatting the date and time for the log file name.
