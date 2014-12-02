@@ -3,6 +3,8 @@ package finaljk;
 import java.lang.Math;
 import java.io.*;
 import java.net.*;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.*;
 
 class Network {
@@ -35,8 +37,13 @@ class Network {
         Scanner input3 = new Scanner(System.in);
         bitLoss = input3.nextInt();
         
+        //Obtaining and formatting the date and time for the log file name.
+//        DateFormat dateFormat = new SimpleDateFormat("dd.MM.yy-HH.mm.ss");
+//        Date date = new Date();
+//        String dateLog = dateFormat.format(date);
+        
         //Create log writer.
-        writer = new PrintWriter("Network_Log.txt", "UTF-8");
+//        writer = new PrintWriter(dateLog+"_Network_Log.txt", "UTF-8");
         
         networkSendSocket = new DatagramSocket(7006);
         networkReceiveSocket = new DatagramSocket(7007);
@@ -70,7 +77,7 @@ class Network {
                     packet = (Packet) is.readObject();
 	
                     System.out.println("Data Packet received - "+packet);
-                    writer.println("Data Packet received - "+packet);
+//                    writer.println("Data Packet received - "+packet);
                 } catch (ClassNotFoundException e) {
 	
                     e.printStackTrace();
@@ -83,12 +90,12 @@ class Network {
             if(!drop()){
             networkSendSocket.send(sendPacket);
             System.out.println("Data Packet Sent - " + packet );
-            writer.println("Data Packet Sent - "+packet);
+//            writer.println("Data Packet Sent - "+packet);
             sent=true;
             }
             else{
                 System.out.println("Dropped Data Packet - " + packet);
-                writer.println("Dropped Data Packet - "+packet);
+//                writer.println("Dropped Data Packet - "+packet);
                 
             }
             
@@ -114,7 +121,7 @@ class Network {
                     packet = (Packet) is.readObject();
 	
                     System.out.println("ACK Packet received - "+packet);
-                    writer.println("ACK Packet received - "+packet);
+//                    writer.println("ACK Packet received - "+packet);
 	
                 } catch (ClassNotFoundException e) {
 	
@@ -127,11 +134,11 @@ class Network {
             if (!drop()){
             networkReceiveSocket.send(FinalPacket);
             System.out.println("ACK Pack Sent - " + packet );
-            writer.println("ACK Pack Sent - "+packet);
+//            writer.println("ACK Pack Sent - "+packet);
             }
             else{
                 System.out.println("Dropped ACK Packet - " + packet);
-                writer.println("Dropped ACK Packet - "+packet);
+//                writer.println("Dropped ACK Packet - "+packet);
             }
             
         }
