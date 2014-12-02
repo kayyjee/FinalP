@@ -1,8 +1,0 @@
-Data Packet received = Packet Type = 1 Sequence Number = 0 Window Size = 3 Acknowledge Number = 0
-ACK Packet Sent = Packet Type = 2 Sequence Number = 0 Window Size = 3 Acknowledge Number = 0
-Data Packet received = Packet Type = 1 Sequence Number = 1 Window Size = 3 Acknowledge Number = 1
-ACK Packet Sent = Packet Type = 2 Sequence Number = 1 Window Size = 3 Acknowledge Number = 1
-Data Packet received = Packet Type = 1 Sequence Number = 2 Window Size = 3 Acknowledge Number = 2
-ACK Packet Sent = Packet Type = 2 Sequence Number = 2 Window Size = 3 Acknowledge Number = 2
-Data Packet received = Packet Type = 3 Sequence Number = 3 Window Size = 3 Acknowledge Number = 3
-EoT Packet Sent = Packet Type = 4 Sequence Number = 3 Window Size = 3 Acknowledge Number = 3
