@@ -9,7 +9,15 @@ import java.text.SimpleDateFormat;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-class Client {
+/** Acts as a host where the user determines whether to Send Data Packets (Transmit) 
+ * or Receive Data Packets from another Host. The Host sends and receives it's packets to and from
+ * the Network Emulator.
+ * 
+ * 
+ * 
+ * @author Kyle
+ */
+class HostB {
 
     private static ArrayList<Packet> Window;//ArrayList that holds Packets for each Send of a WindowSize
     private static DatagramPacket sendPacket;//Data Packet sent to Network Emulator
@@ -262,7 +270,7 @@ class Client {
             //Read incoming Packet 
             Packet packet = (Packet) is.readObject();
             
-            //output packet information
+            //Output packet information
             System.out.println("Data Packet received = " + packet);
             writer.println("Data Packet received = " + packet);
             
