@@ -4,6 +4,8 @@ import java.io.*;
 import java.net.*;
 import java.util.*;
 import java.lang.*;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -16,9 +18,9 @@ class Client {
     private static InetAddress NetEmuIPAddress;
     public static ArrayList<Packet> PacketArray;
     private static int[] checkedPackets;
-    private static int WindowSize = 3;
+    private static int WindowSize = 5;
     private static int seqNumber = 0;
-    private static int totalPackets = 3;
+    private static int totalPackets = 50;
     private static int packetNumber = 0;
     private static byte[] receiveData = new byte[1024];
     private static byte[] sendData = new byte[1024];
@@ -31,9 +33,12 @@ class Client {
     private static long totalPacketsReceived;
 
     public static void main(String args[]) throws Exception {
+        //Obtaining and formatting the date and time for the log file name.
+        DateFormat dateFormat = new SimpleDateFormat("dd.MM.yy-HH.mm.ss");
+        Date date = new Date();
+        String dateLog = dateFormat.format(date);
         //Create log writer.
-
-        writer = new PrintWriter("HostA_Log.txt", "UTF-8");
+        writer = new PrintWriter(dateLog+"_HostA_Log.txt", "UTF-8");
         PacketArray = new ArrayList<Packet>();
         checkedPackets = new int[totalPackets - 1];
         int b;
