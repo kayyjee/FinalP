@@ -147,7 +147,7 @@ class Client {
                     }
 
                 } catch (Exception e) {
-                    if (EOTSent == false) break;
+                    if ((EOTSent == false)&&(PacketArray.get(0).getPacketType()==3)) break;
                     System.out.println("Timeout on packet - " + PacketArray.get(0).getSeqNum());
                     writer.println("Timeout on packet - " + PacketArray.get(0));
 

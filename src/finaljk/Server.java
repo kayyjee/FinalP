@@ -1,5 +1,6 @@
 package finaljk;
 
+import static finaljk.Client.PacketArray;
 import java.io.*;
 import java.net.*;
 import java.util.*;
@@ -146,7 +147,7 @@ class Server {
                     }
 
                 } catch (Exception e) {
-                    if (EOTSent == true) break;
+                    if ((EOTSent == false)&&(PacketArray.get(0).getPacketType()==3)) break;
                     System.out.println("Timeout on packet - " + PacketArray.get(0).getSeqNum());
                     writer.println("Timeout on packet - " + PacketArray.get(0));
 
