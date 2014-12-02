@@ -30,6 +30,7 @@ class Client {
     private static DatagramSocket serverSocket;
     private static InetAddress IPAddress;
     private static long delay = 666;
+    private static boolean EOTSent = false;
     private static long totalPacketsReceived;
 
     public static void main(String args[]) throws Exception {
@@ -109,8 +110,10 @@ class Client {
             receivePacketNumber = 0;
             int timeOut = (int) delay * 3;
             clientSocket.setSoTimeout(timeOut);
-
-            for (i = 0; i < WindowSize; i++) {
+            
+            
+            for (i = 0; i < Window.size(); i++) {
+                
                 DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
 
                 try {
@@ -121,7 +124,7 @@ class Client {
                     ObjectInputStream is = new ObjectInputStream(in);
 
                     try {
-
+                        
                         Packet packet2 = (Packet) is.readObject();
                         System.out.println("Packet ACK received - " + packet2);
                         writer.println("Packet ACK received - " + packet2);
@@ -144,7 +147,7 @@ class Client {
                     }
 
                 } catch (Exception e) {
-
+                    if (EOTSent == false) break;
                     System.out.println("Timeout on packet - " + PacketArray.get(0).getSeqNum());
                     writer.println("Timeout on packet - " + PacketArray.get(0));
 
@@ -264,6 +267,7 @@ class Client {
         serverSocket.send(sendPacket);
         System.out.println("EoT Packet Sent = " + packet);
         writer.println("EoT Packet Sent = " + packet);
+        EOTSent = true;
     }
 
     public static void SendEOT(Packet packet) throws IOException {

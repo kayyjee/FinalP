@@ -31,6 +31,7 @@ class Server {
     private static InetAddress IPAddress;
     private static long delay = 666;
     private static long totalPacketsReceived;
+    private static boolean EOTSent = false;
 
     public static void main(String args[]) throws Exception {
         //Obtaining and formatting the date and time for the log file name.
@@ -145,7 +146,7 @@ class Server {
                     }
 
                 } catch (Exception e) {
-
+                    if (EOTSent == true) break;
                     System.out.println("Timeout on packet - " + PacketArray.get(0).getSeqNum());
                     writer.println("Timeout on packet - " + PacketArray.get(0));
 
@@ -265,6 +266,7 @@ class Server {
         serverSocket.send(sendPacket);
         System.out.println("EoT Packet Sent = " + packet);
         writer.println("EoT Packet Sent = " + packet);
+        EOTSent = true;
     }
 
     public static void SendEOT(Packet packet) throws IOException {
