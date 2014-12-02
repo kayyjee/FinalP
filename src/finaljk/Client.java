@@ -18,7 +18,7 @@ class Client {
     private static InetAddress NetEmuIPAddress;
     public static ArrayList<Packet> PacketArray;
     private static int[] checkedPackets;
-    private static int WindowSize = 5;
+    private static int WindowSize = 10;
     private static int seqNumber = 0;
     private static int totalPackets = 50;
     private static int packetNumber = 0;
@@ -32,6 +32,7 @@ class Client {
     private static long delay = 666;
     private static boolean EOTSent = false;
     private static long totalPacketsReceived;
+    private static int timeOut;
 
     public static void main(String args[]) throws Exception {
         //Obtaining and formatting the date and time for the log file name.
@@ -61,6 +62,11 @@ class Client {
             System.out.println("How much simulated network delay would you like (milliseconds)?");
             Scanner input = new Scanner(System.in);
             delay = input.nextLong();
+            
+            timeOut = (int) delay * 6;
+            if (timeOut == 0){
+                timeOut = 1000;
+            }
             clientSocket = new DatagramSocket(7005);
             System.out.println("Preparing to send");
             CreatePackets();
@@ -108,7 +114,6 @@ class Client {
             k = 0;
             l = 0;
             receivePacketNumber = 0;
-            int timeOut = (int) delay * 3;
             clientSocket.setSoTimeout(timeOut);
             
             
@@ -282,6 +287,7 @@ class Client {
         sendPacket = new DatagramPacket(sendData, sendData.length, NetEmuIPAddress, 7006);
         Send(sendPacket);
         System.out.println("EoT Packet Sent = " + packet);
+        EOTSent = true;
         writer.println("EoT Packet Sent = " + packet);
     }
 

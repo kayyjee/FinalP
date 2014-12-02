@@ -1,6 +1,5 @@
 package finaljk;
 
-import static finaljk.Client.PacketArray;
 import java.io.*;
 import java.net.*;
 import java.util.*;
@@ -10,7 +9,7 @@ import java.text.SimpleDateFormat;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-class Server {
+class Server{
 
     private static ArrayList<Packet> Window;
     private static int receivePacketNumber = 0;
@@ -19,7 +18,7 @@ class Server {
     private static InetAddress NetEmuIPAddress;
     public static ArrayList<Packet> PacketArray;
     private static int[] checkedPackets;
-    private static int WindowSize = 5;
+    private static int WindowSize = 10;
     private static int seqNumber = 0;
     private static int totalPackets = 50;
     private static int packetNumber = 0;
@@ -31,17 +30,17 @@ class Server {
     private static DatagramSocket serverSocket;
     private static InetAddress IPAddress;
     private static long delay = 666;
-    private static long totalPacketsReceived;
     private static boolean EOTSent = false;
+    private static long totalPacketsReceived;
+    private static int timeOut;
 
     public static void main(String args[]) throws Exception {
         //Obtaining and formatting the date and time for the log file name.
         DateFormat dateFormat = new SimpleDateFormat("dd.MM.yy-HH.mm.ss");
         Date date = new Date();
         String dateLog = dateFormat.format(date);
-
         //Create log writer.
-        writer = new PrintWriter(dateLog+"_HostB_Log.txt", "UTF-8");
+        writer = new PrintWriter(dateLog+"_HostA_Log.txt", "UTF-8");
         PacketArray = new ArrayList<Packet>();
         checkedPackets = new int[totalPackets - 1];
         int b;
@@ -63,6 +62,11 @@ class Server {
             System.out.println("How much simulated network delay would you like (milliseconds)?");
             Scanner input = new Scanner(System.in);
             delay = input.nextLong();
+            
+            timeOut = (int) delay * 10;
+            if (timeOut == 0){
+                timeOut = 1000;
+            }
             clientSocket = new DatagramSocket(7005);
             System.out.println("Preparing to send");
             CreatePackets();
@@ -82,7 +86,7 @@ class Server {
 
         while (!PacketArray.isEmpty()) {
 
-            PrepareWindow();
+            PrepareWindow();//Fills up Window<> with window amount of packets. If there is not that many than 
 
             for (int c = 0; c < Window.size(); c++) {
                 int m = PacketArray.get(c).getPacketType();
@@ -110,10 +114,11 @@ class Server {
             k = 0;
             l = 0;
             receivePacketNumber = 0;
-            int timeOut = (int) delay * 3;
             clientSocket.setSoTimeout(timeOut);
-
-            for (i = 0; i < WindowSize; i++) {
+            
+            
+            for (i = 0; i < Window.size(); i++) {
+                
                 DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
 
                 try {
@@ -124,7 +129,7 @@ class Server {
                     ObjectInputStream is = new ObjectInputStream(in);
 
                     try {
-
+                        
                         Packet packet2 = (Packet) is.readObject();
                         System.out.println("Packet ACK received - " + packet2);
                         writer.println("Packet ACK received - " + packet2);
@@ -282,6 +287,7 @@ class Server {
         sendPacket = new DatagramPacket(sendData, sendData.length, NetEmuIPAddress, 7006);
         Send(sendPacket);
         System.out.println("EoT Packet Sent = " + packet);
+        EOTSent = true;
         writer.println("EoT Packet Sent = " + packet);
     }
 
