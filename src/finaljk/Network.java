@@ -1,165 +1,151 @@
 package finaljk;
 
-
+import java.lang.Math;
 import java.io.*;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.InetAddress;
-import java.net.SocketException;
-
+import java.net.*;
 import java.util.*;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
-
-class Network {  
-    static int bitLoss = 0;
-    static int HostASendSocket = 7006;
-    static int HostAReceiveSocket = 7009;
-    static int HostBSendSocket = 7008;
-    static int HostBReceiveSocket = 7007;
+class Network {
     
-    public static void main(String args[]) throws Exception {
-        System.out.println("What percentage of packets would you like to be dropped?");
-        Scanner scan = new Scanner(System.in);
-        bitLoss = scan.nextInt();
-        
-        
-        NetworkThreadObj HostA = new NetworkThreadObj("HostA",HostASendSocket,HostBReceiveSocket,bitLoss);
-        Thread HostAThread = new Thread(HostA);
-        HostAThread.start();
-        
-        NetworkThreadObj HostB = new NetworkThreadObj("HostB",HostBSendSocket,HostAReceiveSocket,bitLoss);
-        Thread HostBThread = new Thread(HostB);
-        HostBThread.start();
-        
-        HostAThread.join();
-        HostBThread.join();
-    }
-        
-    
-    
-    public static boolean drop () throws IOException{
-        int minimum = 0;
-        int maximum = 99;
-
-        int randomNum = minimum + (int)(Math.random() * maximum);
-        if (randomNum > bitLoss){
-            return false;
-
-        }
-        else return true;
-
-    }
-}
-
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
-
-/**
- *
- * @author JT
- */
- class NetworkThreadObj implements Runnable{
-    private Thread t;
-    private static int bitLoss; // ~5% of packets will be dropped.
+    private static int bitLoss = 0; // ~5% of packets will be dropped.
+    private static DatagramPacket ReturnPacket;
+    private static DatagramPacket ReceivePacket;
+    private static DatagramSocket networkReceiveSocket;
+    private static DatagramSocket networkSendSocket;
+    private static InetAddress HostAIPAddress;
+    private static InetAddress HostBIPAddress;
+    private static Packet packet;
+    private static boolean sent = false;
     private static byte[] receiveData = new byte[1024];
     private static byte[] sendData = new byte[1024];
-    public  int receiveSocket;
-    public  int sendSocket;
-    public String name;
-   
+    static PrintWriter writer;
         
-    public NetworkThreadObj (String name, int receivePort, int sendPort, int packetLoss) {
-        this.name = name;
-        this.receiveSocket = receivePort;
-        this.sendSocket = sendPort;
-        this.bitLoss = packetLoss;
+    
+    
+    public static void main(String args[]) throws Exception {
+        System.out.println("What is the IP address of transmitting host?");
+        Scanner input = new Scanner(System.in);
+        String hostAIP = input.nextLine();
+        HostAIPAddress = InetAddress.getByName(hostAIP);
+        System.out.println("What is the IP address of receiving host?");
+        Scanner input2 = new Scanner(System.in);
+        String hostBIP = input2.nextLine();
+        HostBIPAddress = InetAddress.getByName(hostBIP);
+        System.out.println("What percentage of packets would you like to be dropped?");
+        Scanner input3 = new Scanner(System.in);
+        bitLoss = input3.nextInt();
         
-        receiveData = new byte[1024];
-        sendData = new byte[1024];
+        //Create log writer.
+        writer = new PrintWriter("Network_Log.txt", "UTF-8");
         
-        System.out.println("Thread "+name+" has been created. Receving from port " + 
-                receivePort + " and sending from port " + this.sendSocket);
+        networkSendSocket = new DatagramSocket(7006);
+        networkReceiveSocket = new DatagramSocket(7007);
+        
+        
+        while (true) {
+            sent = false;
+            ReceivePacket = new DatagramPacket(receiveData, receiveData.length);
+            forward(ReceivePacket);
+            
+            ReturnPacket = new DatagramPacket(receiveData, receiveData.length);
+            acknowledge(ReturnPacket);
+        }
     }
     
-   
-    public void run() {
-        try {
-            //Port coming from HostA (Client)
-            System.out.println("About to create a receive socket for "+this.name+" on "+this.sendSocket);
-            DatagramSocket networkReceiveSocket = new DatagramSocket(receiveSocket);
-            //Port coming from HostB (Server)
-            DatagramSocket networkSendSocket = new DatagramSocket();
-            //networkReceiveSocket = new DatagramSocket(7007);
-            
-            
-            
-            while (true) {
-                //Read the packet and print out information regarding the received packet.
-                DatagramPacket receivePacket = new DatagramPacket(receiveData,receiveData.length);
-                String received = new String(receivePacket.getData());
-                networkReceiveSocket.receive(receivePacket);
-                receiveData = receivePacket.getData();
-
-                ByteArrayInputStream in = new ByteArrayInputStream(receiveData);
+    
+    
+    
+    
+        public static void forward (DatagramPacket sendPacket) throws IOException{
+            do {
+            networkSendSocket.receive(ReceivePacket);
+             byte[] sendData = ReceivePacket.getData();
+	
+                ByteArrayInputStream in = new ByteArrayInputStream(sendData);
+	
                 ObjectInputStream is = new ObjectInputStream(in);
-
-                System.out.println("Packet received from " +receivePacket.getSocketAddress());
-                Packet packet = (Packet) is.readObject();
-                packet.toString();
-                System.out.println(packet.toString());
-
-                //Forward the packet
-                //SERIALIZE packet back down into byte stream
-                ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-                ObjectOutputStream os = new ObjectOutputStream(outputStream);
-                os.writeObject(packet);
-                sendData = outputStream.toByteArray();
-                DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, InetAddress.getByName("localhost") , sendSocket);
-                networkSendSocket.send(sendPacket);
-                System.out.println("PACKET SENT to "+networkSendSocket.getInetAddress());
-                
-                //            networkSendSocket.receive(ReceivePacket);
-                //            String sentence = new String(ReceivePacket.getData());
-                //            System.out.println("RECEIVED: " + sentence);
-                //            IPAddress = ReceivePacket.getAddress();
-                //            sendData = sentence.getBytes();
-                //            sendPacket = new DatagramPacket(sendData, sendData.length, IPAddress, 7008);
-
-//                if(!drop()){
-//                    networkReceiveSocket.send(sendPacket);
-//                }   
+	
+                try {
+	
+                    packet = (Packet) is.readObject();
+	
+                    System.out.println("Data Packet received - "+packet);
+                    writer.println("Data Packet received - "+packet);
+                } catch (ClassNotFoundException e) {
+	
+                    e.printStackTrace();
+	
+                }
+          
+            //IPAddress = ReceivePacket.getAddress();
+            sendPacket = new DatagramPacket(sendData, sendData.length, HostBIPAddress, 7008);
+            
+            if(!drop()){
+            networkSendSocket.send(sendPacket);
+            System.out.println("Data Packet Sent - " + packet );
+            writer.println("Data Packet Sent - "+packet);
+            sent=true;
             }
-        } catch (SocketException ex) {
-            Logger.getLogger(NetworkThreadObj.class.getName()).log(Level.SEVERE, null, ex);
-        } catch (IOException ex) {
-            Logger.getLogger(NetworkThreadObj.class.getName()).log(Level.SEVERE, null, ex);
-        } catch (ClassNotFoundException ex) {
-            Logger.getLogger(NetworkThreadObj.class.getName()).log(Level.SEVERE, null, ex);
+            else{
+                System.out.println("Dropped Data Packet - " + packet);
+                writer.println("Dropped Data Packet - "+packet);
+                
+            }
+            
+            }
+            while (!sent);
+           
         }
-    }
+            
         
-    public static boolean drop () throws IOException{
-        int minimum = 0;
-        int maximum = 99;
-
-        int randomNum = minimum + (int)(Math.random() * maximum);
-        if (randomNum > bitLoss){
-            return false;
-
+        
+        
+        
+        public static void acknowledge (DatagramPacket ReturnPacket) throws IOException{
+            networkReceiveSocket.receive(ReturnPacket);
+             byte[] sendData = ReturnPacket.getData();
+	
+                ByteArrayInputStream in = new ByteArrayInputStream(sendData);
+	
+                ObjectInputStream is = new ObjectInputStream(in);
+	
+                try {
+	
+                    packet = (Packet) is.readObject();
+	
+                    System.out.println("ACK Packet received - "+packet);
+                    writer.println("ACK Packet received - "+packet);
+	
+                } catch (ClassNotFoundException e) {
+	
+                    e.printStackTrace();
+	
+                }
+            
+            DatagramPacket FinalPacket = new DatagramPacket(sendData, sendData.length, HostAIPAddress, 7005);
+            
+            if (!drop()){
+            networkReceiveSocket.send(FinalPacket);
+            System.out.println("ACK Pack Sent - " + packet );
+            writer.println("ACK Pack Sent - "+packet);
+            }
+            else{
+                System.out.println("Dropped ACK Packet - " + packet);
+                writer.println("Dropped ACK Packet - "+packet);
+            }
+            
         }
-        else return true;
-
+        
+        public static boolean drop () throws IOException{
+            Random rand = new Random();
+            if (rand.nextInt(100) < bitLoss){
+            return true;
+        }
+          
+            else return false;
+            
+        }
     }
-}
-
-
-    
-
 
 
 

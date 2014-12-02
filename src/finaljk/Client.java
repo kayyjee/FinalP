@@ -2,184 +2,261 @@ package finaljk;
 
 import java.io.*;
 import java.net.*;
-import java.util.ArrayList;
-import java.util.Scanner;
+import java.util.*;
+import java.lang.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 class Client {
-
+    private static ArrayList<Packet> Window;
+    private static int receivePacketNumber = 0;
     private static DatagramPacket sendPacket;
     private static DatagramSocket clientSocket;
-    private static InetAddress ClientIPAddress;
-    private static int WindowSize = 5;
-    private static int totalPackets = 10;
+    private static InetAddress NetEmuIPAddress;
+    public static ArrayList<Packet> PacketArray;
+    private static int[] checkedPackets;
+    private static int WindowSize = 10;
+    private static int seqNumber = 0;
+    private static int totalPackets = 50;
     private static int packetNumber = 0;
     private static byte[] receiveData = new byte[1024];
     private static byte[] sendData = new byte[1024];
-    static int hostASendSocket = 7006;
-    static int hostAReceiveSocket = 7009;
-    public static ArrayList<Packet> packetsContainer;
-    public static String hostASendIP = "localhost";
+    private static int bitLoss = 5; // ~5% of packets will be dropped. 
+    static PrintWriter writer;
+    private static DatagramPacket ReceivePacket;
+    private static DatagramSocket serverSocket;
+    private static InetAddress IPAddress;
+    private static long delay = 666;
 
     public static void main(String args[]) throws Exception {
-//        BufferedReader inFromUser = new BufferedReader(new InputStreamReader(System.in));
-//        clientSocket = new DatagramSocket(7005);
-        ClientIPAddress = InetAddress.getByName("localhost");
-        
-        packetsContainer = new ArrayList<>();
+        //Create log writer.
+        writer = new PrintWriter("HostA_Log.txt", "UTF-8");
+        PacketArray = new ArrayList<Packet>();
+        checkedPackets = new int[totalPackets - 1];
+        int b;
 
-        System.out.println(ClientIPAddress);
-        System.out.println("What would you like to do? Send or Receive?");
-        Scanner input = new Scanner(System.in);
-        String choice = input.nextLine();
-
-        
-        while(true) {
-        if (choice.equalsIgnoreCase("send")){
-            send();
+        for (b = 0; b < totalPackets - 1; b++) {
+            checkedPackets[b] = 0;
         }
-        else{
+
+//        BufferedReader inFromUser = new BufferedReader(new InputStreamReader(System.in));
+        
+        System.out.println("What is the IP address of the network emulator?");
+        Scanner input2 = new Scanner(System.in);
+        String netIP = input2.nextLine();
+        NetEmuIPAddress = InetAddress.getByName(netIP);
+
+        System.out.println("What would you like to do? Send or Receive?");
+        Scanner input3 = new Scanner(System.in);
+        String choice = input3.nextLine();
+        if (choice.equalsIgnoreCase("send")) {
+            System.out.println("How much simulated network delay would you like (milliseconds)?");
+            Scanner input = new Scanner(System.in);
+            delay = input.nextLong();
+            clientSocket = new DatagramSocket(7005);
+            System.out.println("Preparing to send");
+            CreatePackets();
+            sendStart();
+        }
+        else {
+            serverSocket = new DatagramSocket(7008);
+            System.out.println("Waiting to receive...");
             receive();
-        }   
+        }
+
+    
+    }
+    
+    public static void sendStart() throws Exception{
+        int i = 0;
+        int k = 0;
+        int l = 0;
+        
+        
+        while (!PacketArray.isEmpty()) {
+
+            PrepareWindow();
+
+            for (int c = 0; c < Window.size(); c++) {
+
+                ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+                ObjectOutputStream os = new ObjectOutputStream(outputStream);
+                os.writeObject(PacketArray.get(l));
+                byte[] sendData = outputStream.toByteArray();
+                sendPacket = new DatagramPacket(sendData, sendData.length, NetEmuIPAddress, 7006);
+                Send(sendPacket);
+                Packet packet2 = (Packet) Window.get(l);
+                
+                System.out.println("SENT Data Packet - " + packet2.getSeqNum());
+                writer.println("SENT Data Packet - " + packet2);
+
+                l++;
+                packetNumber++;
+
+            }
+            
+
+            k = 0;
+            l = 0;
+            receivePacketNumber = 0;
+            int timeOut = (int)delay*3;
+            clientSocket.setSoTimeout(timeOut);
+
+            for (i = 0; i < WindowSize; i++) {
+                DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
+
+                try {
+                    clientSocket.receive(receivePacket);
+                    byte[] receivedata = receivePacket.getData();
+
+                    ByteArrayInputStream in = new ByteArrayInputStream(receivedata);
+                    ObjectInputStream is = new ObjectInputStream(in);
+
+                    try {
+
+                        Packet packet2 = (Packet) is.readObject();
+                        System.out.println("Packet ACK received - " + packet2);
+                        writer.println("Packet ACK received - " + packet2);
+                        
+
+                        if (packet2.getPacketType() == 4) {
+                            System.out.println("End of Transmission Received, Goodbye!");
+                            writer.println("End of Transmission Received, Goodbye");
+                            writer.close();
+                            System.exit(0);
+                        }
+                        CheckOffReceivedPackets(packet2);
+                        receivePacketNumber++;
+
+                    } catch (ClassNotFoundException e) {
+
+                        e.printStackTrace();
+
+                    }
+
+                } catch (Exception e) {
+                    
+                    System.out.println("Timeout on packet - " + PacketArray.get(0).getSeqNum());
+                    writer.println("Timeout on packet - " + PacketArray.get(0));
+
+                    break;
+                }
+
+            }
             //clientSocket.close();
         }
     }
-
-    private static void send() throws Exception {     
-         
-        //Fill the window with packets.
-        for (int i = 0; i < packetsContainer.size(); i++) {
-                //Packet type, seq num, window size, ack num
-                Packet packet = new Packet(1, packetNumber, 5, packetNumber);
-                //Add this pcaket into the container
-                packetsContainer.add(packet);
-                System.out.println("Packet " + packetsContainer.get(i).getSeqNum() + "added to window.");
-                packetNumber++;
-        }
-         
-
-        for(int i = 0; i < packetsContainer.size(); i++) {
-           InetAddress IPAddress = InetAddress.getByName(hostASendIP);
-           sendData = serializePacket(packetsContainer.get(i));
-           DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, IPAddress, hostASendSocket);
-           clientSocket.send(sendPacket);
-           System.out.println("Packet " + packetsContainer.get(i).getSeqNum() + " has been sent");
-
-           //Create the timer for last packet
-           // If its the last packet, create a timer
-//           if (i == packetsContainer.size()-1) {
-//               System.out.println("LAST PACKET SENT!!");
-//               HostA.maxPacketSent = seqNum;
-//               System.out.println("Max Packet is now " + seqNum);
-//               timer = new Timer(String.valueOf(seqNum));
-//               timer.schedule(new timeOut() {
-//               }, 500);
-//               System.out.println("TIMER CREATED for last packet, seq number " + seqNum);
-//               //Create a threadID object that will be held in a container for easy access later
-//               threadID elton = new threadID(seqNum, timer);
-//               threadList.add(elton);
-//               clientSocket.close();
-//           }
-        
-        }
-        System.out.println("Going into receive mode");
-        receive();
-        
-//        int i = 0;
-//        while (packetNumber < totalPackets - 1) {
-//            
-//            for (i = 0; i < WindowSize; i++) {
-//                try {
-//                    DatagramSocket Socket = new DatagramSocket();
-//                    InetAddress IPAddress = InetAddress.getByName("localhost");
-//                    byte[] incomingData = new byte[1024];
-//                    Packet packet = new Packet(2,packetNumber,5,1);
-//                    ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-//                    ObjectOutputStream os = new ObjectOutputStream(outputStream);
-//                    os.writeObject(packet);
-//                    byte[] data = outputStream.toByteArray();
-//                    DatagramPacket sendPacket = new DatagramPacket(data, data.length, IPAddress, hostASendSocket);
-//                    Socket.send(sendPacket);
-//                    System.out.println("Packet: " + packetNumber + " sent");
-////                        DatagramPacket incomingPacket = new DatagramPacket(incomingData, incomingData.length);
-////                        Socket.receive(incomingPacket);
-////                        String response = new String(incomingPacket.getData());
-////                        System.out.println("Response from server:" + response);
-////                        Thread.sleep(2000);
-//                } catch (UnknownHostException e) {
-//                    e.printStackTrace();
-//                } catch (SocketException e) {
-//                    e.printStackTrace();
-//                } catch (IOException e) {
-//                    e.printStackTrace();
-//                }
-//                packetNumber++;
-//            }
-//        }
-//                for (i = 0; i < WindowSize; i++){
-//                    DatagramSocket Socket = new DatagramSocket();
-//                    InetAddress IPAddress = InetAddress.getByName("localhost");
-//                    byte[] incomingData = new byte[1024];
-//                    DatagramPacket incomingPacket = new DatagramPacket(incomingData, incomingData.length);
-//                    Socket.receive(incomingPacket);
-//                    String response = new String(incomingPacket.getData());
-//                    System.out.println("Response from server:" + response);
-//                }
-        receive();
-    }
     
-    private static void receive() {
-        try {        
-            //Create a socket for the clients to connec to you on.
-            DatagramSocket listenSocket = new DatagramSocket(hostAReceiveSocket);
-            
-            //Define the size of byte arrays that will hold data
-            byte[] receiveData =  new byte[1024];
-            
-            System.out.println("Receiver socket created - waiting to receive");
-            
-            // While this loop is true, keep listening
-            while (true){
-                    DatagramPacket receivePacket = new DatagramPacket(receiveData,receiveData.length);
-                    listenSocket.receive(receivePacket);
-                    
-                    receiveData = receivePacket.getData();
-                    
-                    ByteArrayInputStream in = new ByteArrayInputStream(receiveData);
-                    ObjectInputStream is = new ObjectInputStream(in);
-                    
-                    Packet packet = (Packet) is.readObject();
-                    System.out.println("Packet : "+packet.getSeqNum()+" received");
-                    
-                    if(packet.getPacketType()==3){
-                        System.out.println("Last packet has been received.");
-                    }
-            }   
-        } catch (UnknownHostException ex) {
-            Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
-        } catch (SocketException ex) {
-            Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
-        } catch (IOException ex) {
-            Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
-        } catch (ClassNotFoundException ex) {
-            Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
+
+    public static ArrayList CreatePackets() throws IOException {
+        int i;
+
+        for (i = 0; i < totalPackets; i++) {
+            Packet packet = new Packet(1, i, WindowSize, i);
+            PacketArray.add(packet);
         }
+        Packet finalPacket = new Packet(3, totalPackets, WindowSize, totalPackets);
+        PacketArray.add(finalPacket);
+        return PacketArray;
+
     }
-    
-    //Serializes the packets in order for them to be put in the array and sent to another host.
-    public static byte[] serializePacket(Packet packet) {
-        //Serialize packet object into a bytearray
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        ObjectOutputStream os;
+
+    public static void Send(DatagramPacket Packets) throws IOException {
+        //Simulated network delay.
         try {
-            os = new ObjectOutputStream(outputStream);
-            os.writeObject(packet);
-        } catch (IOException ex) {
-            Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
+            Thread.sleep(delay);
+        } catch(InterruptedException ex) {
+            Thread.currentThread().interrupt();
         }
-        return outputStream.toByteArray();
+        clientSocket.send(sendPacket);
+        //send(Packets);
+    }
+
+    public static void CheckOffReceivedPackets(Packet packet) {
+        //if packet is received, array at that seqnumber becomes 1. 1 means received. 0 means re-send. 
+        for (Packet PacketArray1 : PacketArray) {
+
+        }
+        for (int i = 0; i < PacketArray.size(); i++) {
+            if (PacketArray.get(i).getSeqNum() == packet.getSeqNum()) {
+                PacketArray.remove(i);
+            }
+        }
+        PacketArray.remove(packet);
+    }
+
+    public static void PrepareWindow() {
+        int i;
+        Window = new ArrayList(WindowSize);
+        if (PacketArray.size() < WindowSize) {
+            for (i = 0; i < PacketArray.size(); i++) {
+                Window.add(PacketArray.get(i));
+                
+            }
+        
+            
+        } else {
+            for (i = 0; i < WindowSize; i++) {
+                Window.add(PacketArray.get(i));
+            }
+        }
 
     }
-    
+
+    public static void receive() throws Exception{
+        while (true) {
+
+            ReceivePacket = new DatagramPacket(receiveData, receiveData.length);
+            serverSocket.receive(ReceivePacket);
+            IPAddress = ReceivePacket.getAddress();
+
+            byte[] sendData = ReceivePacket.getData();
+
+            ByteArrayInputStream in = new ByteArrayInputStream(sendData);
+
+            ObjectInputStream is = new ObjectInputStream(in);
+
+            Packet packet = (Packet) is.readObject();
+            System.out.println("Data Packet received = " + packet);
+            writer.println("Data Packet received = " + packet);
+
+            if (packet.getPacketType() == 3) {
+                SendEnd(packet);
+                writer.close();
+            } else {
+                int seqNum = packet.getSeqNum();
+                int windowSize = packet.getWindowSize();
+
+                packet = new Packet(2, seqNum, windowSize, seqNum);
+
+                ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+                ObjectOutputStream os = new ObjectOutputStream(outputStream);
+                os.writeObject(packet);
+                sendData = outputStream.toByteArray();
+                DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, IPAddress, 7007);
+
+                serverSocket.send(sendPacket);
+                System.out.println("ACK Packet Sent = " + packet);
+                writer.println("ACK Packet Sent = " + packet);
+            }
+        }
+    }
+
+    public static void SendEnd(Packet packet) throws IOException {
+        int seqNum = packet.getSeqNum();
+        int windowSize = packet.getWindowSize();
+
+        packet = new Packet(4, seqNum, windowSize, seqNum);
+
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        ObjectOutputStream os = new ObjectOutputStream(outputStream);
+        os.writeObject(packet);
+        sendData = outputStream.toByteArray();
+        DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, IPAddress, 7007);
+
+        serverSocket.send(sendPacket);
+        System.out.println("EoT Packet Sent = " + packet);
+        writer.println("EoT Packet Sent = " + packet);
+    }
+
 }
