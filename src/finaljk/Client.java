@@ -8,6 +8,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 class Client {
+
     private static ArrayList<Packet> Window;
     private static int receivePacketNumber = 0;
     private static DatagramPacket sendPacket;
@@ -15,9 +16,9 @@ class Client {
     private static InetAddress NetEmuIPAddress;
     public static ArrayList<Packet> PacketArray;
     private static int[] checkedPackets;
-    private static int WindowSize = 10;
+    private static int WindowSize = 3;
     private static int seqNumber = 0;
-    private static int totalPackets = 50;
+    private static int totalPackets = 3;
     private static int packetNumber = 0;
     private static byte[] receiveData = new byte[1024];
     private static byte[] sendData = new byte[1024];
@@ -27,9 +28,11 @@ class Client {
     private static DatagramSocket serverSocket;
     private static InetAddress IPAddress;
     private static long delay = 666;
+    private static long totalPacketsReceived;
 
     public static void main(String args[]) throws Exception {
         //Create log writer.
+
         writer = new PrintWriter("HostA_Log.txt", "UTF-8");
         PacketArray = new ArrayList<Packet>();
         checkedPackets = new int[totalPackets - 1];
@@ -40,7 +43,6 @@ class Client {
         }
 
 //        BufferedReader inFromUser = new BufferedReader(new InputStreamReader(System.in));
-        
         System.out.println("What is the IP address of the network emulator?");
         Scanner input2 = new Scanner(System.in);
         String netIP = input2.nextLine();
@@ -57,49 +59,50 @@ class Client {
             System.out.println("Preparing to send");
             CreatePackets();
             sendStart();
-        }
-        else {
+        } else {
             serverSocket = new DatagramSocket(7008);
             System.out.println("Waiting to receive...");
             receive();
         }
 
-    
     }
-    
-    public static void sendStart() throws Exception{
+
+    public static void sendStart() throws Exception {
         int i = 0;
         int k = 0;
         int l = 0;
-        
-        
+
         while (!PacketArray.isEmpty()) {
 
             PrepareWindow();
 
             for (int c = 0; c < Window.size(); c++) {
+                int m = PacketArray.get(c).getPacketType();
+                if (m == 3) {
+                    if (PacketArray.size() == 1) {
+                        SendEOT(PacketArray.get(c));
+                    }
+                } else {
+                    ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+                    ObjectOutputStream os = new ObjectOutputStream(outputStream);
+                    os.writeObject(PacketArray.get(l));
+                    byte[] sendData = outputStream.toByteArray();
+                    sendPacket = new DatagramPacket(sendData, sendData.length, NetEmuIPAddress, 7006);
+                    Send(sendPacket);
+                    Packet packet2 = (Packet) Window.get(l);
 
-                ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-                ObjectOutputStream os = new ObjectOutputStream(outputStream);
-                os.writeObject(PacketArray.get(l));
-                byte[] sendData = outputStream.toByteArray();
-                sendPacket = new DatagramPacket(sendData, sendData.length, NetEmuIPAddress, 7006);
-                Send(sendPacket);
-                Packet packet2 = (Packet) Window.get(l);
-                
-                System.out.println("SENT Data Packet - " + packet2.getSeqNum());
-                writer.println("SENT Data Packet - " + packet2);
+                    System.out.println("SENT Data Packet - " + packet2.getSeqNum());
+                    writer.println("SENT Data Packet - " + packet2);
 
-                l++;
-                packetNumber++;
-
+                    l++;
+                    packetNumber++;
+                }
             }
-            
 
             k = 0;
             l = 0;
             receivePacketNumber = 0;
-            int timeOut = (int)delay*3;
+            int timeOut = (int) delay * 3;
             clientSocket.setSoTimeout(timeOut);
 
             for (i = 0; i < WindowSize; i++) {
@@ -117,14 +120,15 @@ class Client {
                         Packet packet2 = (Packet) is.readObject();
                         System.out.println("Packet ACK received - " + packet2);
                         writer.println("Packet ACK received - " + packet2);
-                        
 
                         if (packet2.getPacketType() == 4) {
-                            System.out.println("End of Transmission Received, Goodbye!");
-                            writer.println("End of Transmission Received, Goodbye");
-                            writer.close();
-                            System.exit(0);
-                        }
+                            
+                                System.out.println("End of Transmission Received, Goodbye!");
+                                writer.println("End of Transmission Received, Goodbye");
+                                writer.close();
+                                System.exit(0);
+                            }
+                        
                         CheckOffReceivedPackets(packet2);
                         receivePacketNumber++;
 
@@ -135,7 +139,7 @@ class Client {
                     }
 
                 } catch (Exception e) {
-                    
+
                     System.out.println("Timeout on packet - " + PacketArray.get(0).getSeqNum());
                     writer.println("Timeout on packet - " + PacketArray.get(0));
 
@@ -146,7 +150,6 @@ class Client {
             //clientSocket.close();
         }
     }
-    
 
     public static ArrayList CreatePackets() throws IOException {
         int i;
@@ -165,7 +168,7 @@ class Client {
         //Simulated network delay.
         try {
             Thread.sleep(delay);
-        } catch(InterruptedException ex) {
+        } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
         }
         clientSocket.send(sendPacket);
@@ -191,10 +194,9 @@ class Client {
         if (PacketArray.size() < WindowSize) {
             for (i = 0; i < PacketArray.size(); i++) {
                 Window.add(PacketArray.get(i));
-                
+
             }
-        
-            
+
         } else {
             for (i = 0; i < WindowSize; i++) {
                 Window.add(PacketArray.get(i));
@@ -203,7 +205,7 @@ class Client {
 
     }
 
-    public static void receive() throws Exception{
+    public static void receive() throws Exception {
         while (true) {
 
             ReceivePacket = new DatagramPacket(receiveData, receiveData.length);
@@ -255,6 +257,21 @@ class Client {
         DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, IPAddress, 7007);
 
         serverSocket.send(sendPacket);
+        System.out.println("EoT Packet Sent = " + packet);
+        writer.println("EoT Packet Sent = " + packet);
+    }
+
+    public static void SendEOT(Packet packet) throws IOException {
+        int seqNum = packet.getSeqNum();
+        int windowSize = packet.getWindowSize();
+
+
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        ObjectOutputStream os = new ObjectOutputStream(outputStream);
+        os.writeObject(packet);
+        byte[] sendData = outputStream.toByteArray();
+        sendPacket = new DatagramPacket(sendData, sendData.length, NetEmuIPAddress, 7006);
+        Send(sendPacket);
         System.out.println("EoT Packet Sent = " + packet);
         writer.println("EoT Packet Sent = " + packet);
     }
